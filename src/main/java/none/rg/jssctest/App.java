@@ -26,7 +26,6 @@ public class App {
         String portName = choosePort();
         port = openPort(portName);
         setClosePortHook();
-        addReceiveHandler();
     }
     
     private void closePort() {
@@ -70,23 +69,6 @@ public class App {
         return port;
     }
     
-    private void addReceiveHandler() {
-        try {
-            port.addEventListener(event -> {
-                try {
-                    if (event.getEventType() != SerialPortEvent.RXCHAR) {
-                        return;
-                    }
-                    receiveBytes(port.readBytes());
-                } catch (SerialPortException e) {
-                    throw new RuntimeException("Exception on receiving: " + e);
-                }
-            });
-        } catch (SerialPortException e) {
-            throw new RuntimeException("Oh no, so much boolsheet: " + e);
-        }
-    }
-    
     private void setClosePortHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             closePort();
@@ -102,8 +84,20 @@ public class App {
                 break;
             }
             sendString(textToSend + "\r");
+            waitMillis(200);
+            receiveBytes(readPort());
         }
         System.out.println("Good bye!");
+    }
+    
+    private byte[] readPort() {
+        byte[] result = null;
+        try {
+            result = port.readBytes();
+        } catch (SerialPortException e) {
+            // fall through
+        }
+        return result != null ? result : new byte[0];
     }
     
     private void receiveBytes(byte[] b) {
@@ -123,5 +117,14 @@ public class App {
             throw new RuntimeException("Exception on sending: " + e);
         }
     }
+    
+    private void waitMillis(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            // never mind, another boolsheet
+        }
+    }
+    
 }
 
